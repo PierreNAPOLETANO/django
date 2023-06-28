@@ -151,10 +151,7 @@ class HttpRequest:
 
     def get_port(self):
         """Return the port number for the request as a string."""
-        if settings.USE_X_FORWARDED_PORT and "HTTP_X_FORWARDED_PORT" in self.META:
-            port = self.META["HTTP_X_FORWARDED_PORT"]
-        else:
-            port = self.META["SERVER_PORT"]
+        port = self.META["HTTP_X_FORWARDED_PORT"] if settings.USE_X_FORWARDED_PORT and "HTTP_X_FORWARDED_PORT" in self.META else self.META["SERVER_PORT"]
         return str(port)
 
     def get_full_path(self, force_append_slash=False):
@@ -207,13 +204,7 @@ class HttpRequest:
         is scheme-relative (i.e., ``//example.com/``), urljoin() it to a base
         URL constructed from the request variables.
         """
-        if location is None:
-            # Make it an absolute url (but schemeless and domainless) for the
-            # edge case that the path starts with '//'.
-            location = "//%s" % self.get_full_path()
-        else:
-            # Coerce lazy locations.
-            location = str(location)
+        location = "//%s" % self.get_full_path() if location is None else str(location)
         bits = urlsplit(location)
         if not (bits.scheme and bits.netloc):
             # Handle the simple, most common case. If the location is absolute
@@ -362,11 +353,7 @@ class HttpRequest:
             return
 
         if self.content_type == "multipart/form-data":
-            if hasattr(self, "_body"):
-                # Use already read data
-                data = BytesIO(self._body)
-            else:
-                data = self
+            data = BytesIO(self._body) if hasattr(self, "_body") else self
             try:
                 self._post, self._files = self.parse_file_upload(self.META, data)
             except (MultiPartParserError, TooManyFilesSent):
@@ -685,10 +672,7 @@ def bytes_to_text(s, encoding):
 
     Return any non-bytes objects without change.
     """
-    if isinstance(s, bytes):
-        return str(s, encoding, "replace")
-    else:
-        return s
+    return str(s, encoding, "replace") if isinstance(s, bytes) else s
 
 
 def split_domain_port(host):
